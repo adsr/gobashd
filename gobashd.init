@@ -1,0 +1,93 @@
+#!/bin/sh
+#
+# gobashd   An asynchronous queryable bash executor
+#
+# chkconfig:   - 20 80
+# description: Starts and stops gobashd
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Overridable vars
+infolog="/var/log/gobashd/info.log"
+errlog="/var/log/gobashd/error.log"
+pidfile="/var/run/gobashd/gobashd.pid"
+scriptdir="/etc/gobashd.d/"
+run_as=mysql
+exec="/usr/bin/gobashd"
+exec_opts="-d ${scriptdir}"
+[ -e /etc/sysconfig/gobashd ] && . /etc/sysconfig/gobashd
+
+# Non-overridable vars
+name="gobashd"
+lockfile="/var/lock/subsys/gobashd"
+
+start() {
+    [ -x $exec ] || exit 5
+    echo -n $"Starting $name: "
+    daemon --user=$run_as --pidfile=$pidfile \
+        "nohup $exec $exec_opts >>$infolog 2>>$errlog & echo \$! > $pidfile"
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && touch $lockfile
+    return $retval
+}
+
+stop() {
+    echo -n $"Stopping $name: "
+    killproc -p $pidfile $name
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+    return $retval
+}
+
+restart() {
+    stop
+    start
+}
+
+reload() {
+    false
+}
+
+rh_status() {
+    status -p $pidfile $name
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+
+
+case "$1" in
+    start)
+        rh_status && exit 0
+        $1
+        ;;
+    stop)
+        rh_status || exit 0
+        $1
+        ;;
+    restart)
+        $1
+        ;;
+    reload)
+        rh_status || exit 7
+        $1
+        ;;
+    force-reload)
+        force_reload
+        ;;
+    status)
+        rh_status
+        ;;
+    condrestart|try-restart)
+        rh_status_q || exit 0
+        restart
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart}"
+        exit 2
+esac
+exit $?
