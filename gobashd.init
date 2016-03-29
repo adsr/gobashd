@@ -26,7 +26,7 @@ start() {
     [ -x $exec ] || exit 5
     echo -n $"Starting $name: "
     daemon --user=$run_as --pidfile=$pidfile \
-        "nohup $exec $exec_opts >>$infolog 2>>$errlog & echo \$! > $pidfile"
+        "nohup $exec $exec_opts -i $infolog -e $errlog & echo \$! > $pidfile"
     retval=$?
     echo
     [ $retval -eq 0 ] && touch $lockfile
