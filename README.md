@@ -25,7 +25,7 @@ production at Etsy for 8 months.
 Consider the following bash script, `/foo/bar/lottery.sh`, and let's pretend we
 want to let clients run this remotely and asynchronously for some reason.
 
-    #/bin/bash
+    #!/bin/bash
     #
     # @desc A lottery example
     #
