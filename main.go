@@ -9,19 +9,23 @@ import (
 )
 
 const (
-    VERSION = "1.5"
+    VERSION = "1.6"
 )
 
 var (
-    config  Config
-    infoLog *log.Logger
-    errLog  *log.Logger
+    config   Config
+    infoLog  *log.Logger
+    errLog   *log.Logger
+    infoFile *os.File
+    errFile  *os.File
 )
 
 type Config struct {
     ScriptDir     string
     JsonAddr      string
     TextprotoAddr string
+    InfoLogPath   string
+    ErrLogPath    string
 }
 
 // A `HandlerFn` takes a `Request` and returns a `Response`
@@ -43,6 +47,8 @@ func main() {
     flag.StringVar(&config.ScriptDir, "d", "/etc/gobashd.d/", "Bash script directory")
     flag.StringVar(&config.JsonAddr, "j", ":4488", "If not-empty, listen for JSON request at this address")
     flag.StringVar(&config.TextprotoAddr, "t", ":4489", "If not-empty, listen for textproto request at this address")
+    flag.StringVar(&config.InfoLogPath, "i", "", "If not-empty, write info log here instead of stdout")
+    flag.StringVar(&config.ErrLogPath, "e", "", "If not-empty, write error log here instead of stderr")
     flag.BoolVar(&printVersion, "v", false, "Print version and exit")
     flag.Parse()
 
@@ -59,6 +65,7 @@ func main() {
     }
 
     server := newServer()
+    server.ReopenLogs()
     server.LoadScripts(".")
 
     if config.JsonAddr != "" {
@@ -70,7 +77,7 @@ func main() {
         go new(TextprotoServerInterface).Listen(config.TextprotoAddr, server.Handle, &waitGroup)
     }
 
-    server.reloadScriptsOnHup()
+    server.reloadOnHup()
 
     waitGroup.Wait()
 }

@@ -264,13 +264,14 @@ func (self *Server) killRun(id string) error {
     return scriptRun.kill()
 }
 
-// Reload scripts on SIGHUP
-func (self *Server) reloadScriptsOnHup() {
+// Reload on SIGHUP
+func (self *Server) reloadOnHup() {
     c := make(chan os.Signal, 1)
     signal.Notify(c, syscall.SIGHUP)
     go func() {
         for _ = range c {
-            infoLog.Printf("Caught SIGHUP, reloading scripts...")
+            infoLog.Printf("Caught SIGHUP, reopening logs and reloading scripts...")
+            self.ReopenLogs()
             self.LoadScripts(".")
         }
     }()
@@ -286,4 +287,30 @@ func (self *Server) getRunById(id string) *ScriptRun {
         }
     }
     return nil
+}
+
+// Reopen infoLog and errLog. Useful for logrotation.
+func (self *Server) ReopenLogs() {
+    if config.InfoLogPath != "" {
+        if newInfoFile, err := os.OpenFile(config.InfoLogPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666); err == nil {
+            infoLog.SetOutput(newInfoFile)
+            if infoFile != nil {
+                infoFile.Close()
+            }
+            infoFile = newInfoFile
+        } else {
+            errLog.Printf("Failed to open info log %s; err=%v\n", config.InfoLogPath, err)
+        }
+    }
+    if config.ErrLogPath != "" {
+        if newErrFile, err := os.OpenFile(config.ErrLogPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666); err == nil {
+            errLog.SetOutput(newErrFile)
+            if errFile != nil {
+                errFile.Close()
+            }
+            errFile = newErrFile
+        } else {
+            errLog.Printf("Failed to open error log %s; err=%v\n", config.ErrLogPath, err)
+        }
+    }
 }
