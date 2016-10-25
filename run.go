@@ -27,6 +27,7 @@ type ScriptRun struct {
     TimeoutSetTs int64
     Timeout      uint64
     Params       map[string]interface{}
+    HostPort     *string
     Outputs      []*bytes.Buffer
     OutputLocks  []sync.Mutex
     ExtraPipes   []io.Closer `json:"-"`
@@ -236,14 +237,39 @@ func (self *ScriptRun) readOutput(fd int, readPipe io.ReadCloser) {
 
 // Log info with `ScriptRun` context
 func (self *ScriptRun) logInfo(f string, v ...interface{}) {
-    f = fmt.Sprintf("[%s] [%s] [%s] %s", self.Script.Name, self.LogId, self.Id, f)
-    infoLog.Printf(f, v...)
+    infoLog.Printf(self.logFmt(f), v...)
 }
 
 // Log error with `ScriptRun` context
 func (self *ScriptRun) logErr(f string, v ...interface{}) {
-    f = fmt.Sprintf("[%s] [%s] [%s] %s", self.Script.Name, self.LogId, self.Id, f)
-    errLog.Printf(f, v...)
+    errLog.Printf(self.logFmt(f), v...)
+}
+
+// Common log format
+func (self *ScriptRun) logFmt(f string) string {
+    return fmt.Sprintf("[script=%s] [uuid=%s] %s%s%s", self.Script.Name, self.Id, self.getLogIdForLog(), self.getHostPortForLog(), f)
+}
+
+// For logging, get hostport param or empty string if N/A
+func (self *ScriptRun) getHostPortForLog() string {
+    if self.HostPort == nil {
+        tmp := ""
+        if port, portOk := self.Params["mysqld_port"]; portOk {
+            if host, hostErr := os.Hostname(); hostErr == nil {
+                tmp = fmt.Sprintf("[hostport=%s:%v] ", host, port)
+            }
+        }
+        self.HostPort = &tmp
+    }
+    return *self.HostPort
+}
+
+// For logging, get logid param of emptry string if N/A
+func (self *ScriptRun) getLogIdForLog() string {
+    if self.LogId != "" {
+        return fmt.Sprintf("[logid=%s] ", self.LogId)
+    }
+    return ""
 }
 
 // Get status as string
