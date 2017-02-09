@@ -213,11 +213,11 @@ func (self *ScriptDef) toInterfaceVal(in string) (interface{}, error) {
     } else if self.Type == "bool" {
         v = false
     } else {
-        return nil, errors.New("Unexpected Type")
+        return nil, errors.New(fmt.Sprintf("Unrecognized type %s for %s", self.Type, self.Name))
     }
     err := json.Unmarshal([]byte(in), &v)
     if err != nil {
-        return nil, err
+        return nil, errors.New(fmt.Sprintf("Unable to parse `%s` as %s (%s)", in, self.Name, self.Type))
     }
     if self.Type == "int" {
         return int(v.(float64)), nil
