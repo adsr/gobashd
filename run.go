@@ -34,6 +34,7 @@ type ScriptRun struct {
     StartTs      int64
     FinishTs     int64
     Finished     bool
+    IsSync       bool
 }
 
 type ScriptRunStatus struct {

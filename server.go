@@ -147,7 +147,11 @@ func (self *Server) Handle(req *Request) *Response {
         resp.ErrorStr = err.Error()
         return resp
     }
-    go scriptRun.run()
+    if scriptRun.IsSync {
+        scriptRun.run()
+    } else {
+        go scriptRun.run()
+    }
     resp.StatusCode = 200
     resp.RunStatii = []*ScriptRunStatus{scriptRun.Status()}
     return resp
@@ -163,6 +167,7 @@ func (self *Server) makeScriptRun(script *Script, req *Request) (*ScriptRun, err
     if uuidErr != nil {
         return nil, uuidErr
     }
+    _, isSync := req.Params["_sync"]
     scriptRun := &ScriptRun{
         Script:       script,
         Request:      req,
@@ -172,6 +177,7 @@ func (self *Server) makeScriptRun(script *Script, req *Request) (*ScriptRun, err
         OutputLocks:  make([]sync.Mutex, len(script.OutputDefs)),
         TimeoutSetTs: time.Now().Unix(),
         TimeoutSet:   make(chan bool),
+        IsSync:       isSync,
     }
     for _ = range scriptRun.OutputLocks {
         scriptRun.Outputs = append(scriptRun.Outputs, &bytes.Buffer{})
